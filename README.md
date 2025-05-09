@@ -88,6 +88,19 @@
 *   直接在终端运行 `solana-keygen grind --help` 查看所有可用选项。
 *   参考 [QuickNode 的相关指南](https://www.quicknode.com/guides/solana-development/getting-started/how-to-create-a-custom-vanity-wallet-address-using-solana-cli)。
 
+
+## 使用方法演示截图
+
+![前缀5888](/images/前缀5888.avif)
+
+** 上图为生成前缀 5888 地址的演示图 **
+
+![后缀pump](/images/后缀pump.avif)
+
+** 上图为生成后缀 pump 地址的演示图 **
+
+
+
 ## 🤝 贡献
 
 欢迎提交问题 (Issues) 或拉取请求 (Pull Requests) 来改进此脚本。
