@@ -1,117 +1,110 @@
 # Solana 靓号地址生成助手 (Solana Vanity Address Generator Helper)
 
-这是一个 Bash 脚本，旨在帮助用户通过 Solana CLI 的 `solana-keygen grind` 命令，以交互式的方式快速生成具有特定前缀、后缀或同时包含两者的 Solana 靓号钱包地址。脚本提供中文提示，并默认进行大小写不敏感的搜索。
+本脚本基于 Solana 官方 `solana-keygen grind`，提供中文交互与非交互两种模式，支持严格 Base58 校验、大小写匹配选择、长耗时估算（58^n 提示）、输出目录整理、依赖检查、SIGINT 安全中断、无 eval 的安全执行。适合初学者和进阶用户。
 
-## ✨ 功能特性
+脚本入口：[`bash.read`](solana_vanity_gen.sh:1)
 
-*   **中文交互界面**：所有提示和选项均为中文，方便中文用户使用。
-*   **灵活的模式选择**：
-    *   仅指定前缀
-    *   仅指定后缀
-    *   同时指定前缀和后缀
-*   **自定义数量**：可以指定生成符合条件的地址数量。
-*   **默认大小写不敏感**：搜索时自动忽略大小写，更容易匹配到期望的字符组合。
-*   **智能提醒**：
-    *   检查 Solana CLI 是否已安装。
-    *   当用户尝试生成过长（通常超过5个自定义字符）的靓号时，会发出警告，提示可能需要极长的生成时间。
-*   **命令预览**：在执行前显示将要运行的 `solana-keygen grind` 命令。
+## ✨ 功能特性（已增强）
+- 中文交互界面与非交互 CLI 参数
+- 模式选择：仅前缀 / 仅后缀 / 前后缀同时指定
+- 自定义生成数量 (--count)
+- 大小写匹配：不区分（默认）/ 区分 (--case)
+- 严格 Base58 校验（拒绝 0 O I l）
+- 长耗时估算与确认（可用 --yes 跳过）
+- 输出目录 (--out-dir) 与运行结束文件清单
+- 依赖检查：solana, solana-keygen, grind 可用性
+- SIGINT 捕获与统一退出码
+- 命令预览与 --dry-run 预演
+- 透传原生参数（助记词、语言、词数等）
 
-## ⚠️ 安全性声明与注意事项
-
-在使用此脚本之前，请务必仔细阅读并理解以下安全相关的说明：
-
-1.  **`eval` 命令的使用**：
-    *   此脚本使用了 `eval` 命令来执行动态构建的 `solana-keygen grind` 指令。`eval` 是一个强大的 Bash 命令，如果使用不当或处理不可信的输入，可能会带来安全风险。
-    *   **在此脚本中**：`eval` 执行的命令字符串是由脚本内部根据用户在受控提示下的输入构建的。脚本本身不从外部文件或网络获取代码来执行。尽管如此，我们仍然建议您：
-        *   **审查代码**：在运行任何从互联网下载的脚本（包括此脚本）之前，请务必亲自审查其源代码，确保您理解其行为。
-        *   **信任来源**：仅从您信任的来源获取此脚本。
-    *   如果您对 `eval` 的使用有任何疑虑，可以考虑手动复制脚本最后生成的命令，并在终端中自行执行。
-
-2.  **私钥安全**：
-    *   **本地生成**：此脚本通过调用 Solana 官方的 `solana-keygen` 工具在您的本地计算机上生成密钥对。脚本本身**不会**存储、记录或传输您的任何私钥或助记词。
-    *   **密钥对文件**：成功生成地址后，包含私钥的 `.json` 文件将保存在您运行脚本的当前目录中。
-    *   **责任自负**：**您对生成的密钥对（尤其是私钥）的保管负有全部责任。**
-        *   **切勿泄露私钥**：绝不要与任何人分享您的私钥或助记词。
-        *   **安全备份**：请将您的 `.json` 密钥文件或助记词备份到安全的地方（例如，加密的U盘、硬件钱包支持的导入方式等），并建议多重备份。
-        *   **助记词**：如果选择生成助记词（脚本的高级示例中提及，但非默认流程），请务必妥善保管助记词。
-
-3.  **依赖 `solana-keygen`**：
-    *   此脚本的功能完全依赖于 Solana 官方提供的 `solana-keygen` 工具。请确保您的 Solana CLI 是从官方渠道安装的最新版本，以保证其安全性。
-
-4.  **无担保**：
-    *   此脚本按“原样”提供，不附带任何明示或暗示的担保。对于因使用此脚本（或其生成的密钥管理不当）而导致的任何资产损失，脚本作者不承担任何责任。
-
-**总结：请始终保持警惕，遵循最佳的安全实践来管理您的加密资产和私钥。**
+## ⚠️ 安全与隐私
+- 本脚本调用本地 `solana-keygen grind` 生成密钥，不上传网络。
+- 生成的 .json 私钥文件需自行妥善保存，建议权限：`chmod 600 file.json`。
+- 大量字符匹配可能耗时很久并持续占用 CPU，请谨慎设置参数。
 
 ## 🚀 环境要求
+- Bash (Linux / macOS / WSL)
+- [Solana CLI](https://docs.solana.com/cli/install-solana-cli-tools)
 
-*   Bash (Linux, macOS, 或 Windows 上的 WSL/Git Bash)
-*   [Solana CLI](https://docs.solana.com/cli/install-solana-cli-tools) 已安装并配置在系统的 PATH 环境变量中。
+## 🛠️ 安装与快速开始
+1) 赋予执行权限
+```bash
+chmod +x ./solana_vanity_gen.sh
+```
+2) 交互模式运行
+```bash
+./solana_vanity_gen.sh
+```
 
-## 🛠️ 如何使用
+## 🤖 非交互命令行用法
+脚本支持以下常用参数；其它原生参数使用 `--` 分隔后透传至 `solana-keygen grind`。
 
-1.  **下载脚本**：
-    将脚本文件（例如 `solana_vanity_gen.sh`）下载到您的本地计算机。
+常用参数
+- --type prefix|suffix|both
+- --prefix STR
+- --suffix STR
+- --count N
+- --case sensitive|insensitive  (默认 insensitive)
+- --yes                         自动确认
+- --dry-run                     仅展示命令不执行
+- --out-dir PATH                将生成的 .json 归档到目录
+- -h, --help                    显示帮助
 
-2.  **赋予执行权限**：
-    在终端中，导航到脚本所在的目录，并运行：
-    ```bash
-    chmod +x solana_vanity_gen.sh
-    ```
+示例
+- 不区分大小写的前缀:
+```bash
+./solana_vanity_gen.sh --type prefix --prefix sol --count 1
+```
+- 区分大小写的后缀:
+```bash
+./solana_vanity_gen.sh --type suffix --suffix Node --case sensitive
+```
+- 前后缀同时匹配 + 输出目录:
+```bash
+./solana_vanity_gen.sh --type both --prefix A --suffix Z --count 2 --out-dir ./vanity-outputs
+```
+- 预演（不执行）:
+```bash
+./solana_vanity_gen.sh --type prefix --prefix gm --dry-run
+```
+- 透传原生参数（助记词示例）:
+```bash
+./solana_vanity_gen.sh --type prefix --prefix A --count 1 -- --use-mnemonic --word-count 24 --language japanese --no-bip39-passphrase
+```
 
-3.  **运行脚本**：
-    ```bash
-    ./solana_vanity_gen.sh
-    ```
+## 📈 耗时估算
+- 估算公式：期望尝试次数 ≈ 58^(前缀长度 + 后缀长度)。
+- 当自定义字符总数超过阈值（默认 5）时会提示确认，可用 `--yes` 跳过。
 
-4.  **遵循提示**：
-    脚本会以中文提问，引导您完成以下步骤：
-    *   选择靓号类型（前缀、后缀、或两者都有）。
-    *   输入您期望的字符。
-    *   输入希望生成的地址数量。
-    *   （如果自定义字符过多，会收到时长警告并请求确认）。
-    *   脚本会显示将要执行的 `solana-keygen grind` 命令。
-    *   按 Enter 键开始生成。
+## 📂 输出与文件组织
+- 未指定 `--out-dir` 时，`solana-keygen` 默认在当前目录生成 .json。
+- 指定 `--out-dir` 时，脚本会在任务结束后将当前目录下生成的 .json 移动到该目录，并打印清单。
+- 也可透传原生 `--no-outfile` 或 `--outfile` 完全自行控制输出。
 
-5.  **生成过程**：
-    `solana-keygen grind` 会开始搜索。根据您设定的字符长度和计算机性能，这可能需要几秒钟到几小时甚至更长时间。您可以随时按 `Ctrl+C` 中断生成过程。
+## 💡 进阶
+- 查看帮助：
+```bash
+./solana_vanity_gen.sh --help
+```
+- 原生命令帮助：
+```bash
+solana-keygen grind --help
+```
+- 参考教程：QuickNode 指南（包含助记词、语言、词数等）
 
-6.  **结果**：
-    *   如果成功找到匹配的地址，对应的 `.json` 密钥对文件（例如 `abc...xyz.json`）会保存在当前目录下。
-    *   脚本会提示您注意备份私钥。
-
-## 💡 高级用法
-
-对于更高级的 `solana-keygen grind` 选项（例如使用助记词、指定助记词语言和长度、多线程等），您可以：
-
-*   查看脚本中“显示文章中的高级示例”选项所展示的命令。
-*   直接在终端运行 `solana-keygen grind --help` 查看所有可用选项。
-*   参考 [QuickNode 的相关指南](https://www.quicknode.com/guides/solana-development/getting-started/how-to-create-a-custom-vanity-wallet-address-using-solana-cli)。
-
-
-## 使用方法演示截图
-
+## 🖼️ 使用方法演示截图
 ![前缀5888](/images/前缀5888.avif)
-
-** 上图为生成前缀 5888 地址的演示图 **
+**上图为生成前缀 5888 地址的演示图**
 
 ![后缀pump](/images/后缀pump.avif)
-
-** 上图为生成后缀 pump 地址的演示图 **
-
-
+**上图为生成后缀 pump 地址的演示图**
 
 ## 🤝 贡献
-
-欢迎提交问题 (Issues) 或拉取请求 (Pull Requests) 来改进此脚本。
-
+欢迎提交 Issues / PR 改进此脚本。
 
 ## 📄 许可证
-
-此项目采用 [MIT 许可证](LICENSE) (如果您打算添加一个 LICENSE 文件的话，否则可以移除此句或选择其他许可证)。
-
+本项目采用 MIT 许可证，详见 LICENSE。
 
 ## 联系方式
-
-*   GitHub: [@gm365](https://github.com/gm365)
-*   Twitter: [@gm365](https://x.com/gm365)
+- GitHub: [@gm365](https://github.com/gm365)
+- Twitter: [@gm365](https://x.com/gm365)
