@@ -1,110 +1,64 @@
-# Solana 靓号地址生成助手 (Solana Vanity Address Generator Helper)
+# Solana 靓号地址生成助手 (SVG - Solana Vanity Generator)
 
-本脚本基于 Solana 官方 `solana-keygen grind`，提供中文交互与非交互两种模式，支持严格 Base58 校验、大小写匹配选择、长耗时估算（58^n 提示）、输出目录整理、依赖检查、SIGINT 安全中断、无 eval 的安全执行。适合初学者和进阶用户。
+本脚本基于 Solana 官方 `solana-keygen grind`，提供简洁高效的靓号地址生成功能。经过深度强化，现已具备严格字符校验、自动化权限防护、版本智能升级指引以及防溢出的高精度耗时估算。
 
-脚本入口：[`bash.read`](solana_vanity_gen.sh:1)
+脚本名称：[`svg.sh`](file:///Users/sos/Documents/GitHub/SolanaVanityHelper/svg.sh)
 
-## ✨ 功能特性（已增强）
-- 中文交互界面与非交互 CLI 参数
-- 模式选择：仅前缀 / 仅后缀 / 前后缀同时指定
-- 自定义生成数量 (--count)
-- 大小写匹配：不区分（默认）/ 区分 (--case)
-- 严格 Base58 校验（拒绝 0 O I l）
-- 长耗时估算与确认（可用 --yes 跳过）
-- 输出目录 (--out-dir) 与运行结束文件清单
-- 依赖检查：solana, solana-keygen, grind 可用性
-- SIGINT 捕获与统一退出码
-- 命令预览与 --dry-run 预演
-- 透传原生参数（助记词、语言、词数等）
+## ✨ 主要特性
+- **极简命令**：重命名为 `svg.sh`，更易输入和记忆。
+- **强制安全性**：生成的私钥强制 `chmod 600`，输出目录强制 `chmod 700`。
+- **智能交互**：更清爽的菜单排版，支持输入非法 Base58 字符时即时纠错并重试。
+- **版本指引**：启动检测 `Solana CLI` 状态，并为 macOS 提供一键升级指引。
+- **高精度估算**：采用 `awk` 解决大位数运算溢出，提供真实的尝试次数预估。
+- **归档支持**：支持 `--out-dir` 归档并自动识别新生成文件（不误触旧密钥）。
 
-## ⚠️ 安全与隐私
-- 本脚本调用本地 `solana-keygen grind` 生成密钥，不上传网络。
-- 生成的 .json 私钥文件需自行妥善保存，建议权限：`chmod 600 file.json`。
-- 大量字符匹配可能耗时很久并持续占用 CPU，请谨慎设置参数。
+## ⚠️ 安全警告
+- **物理断网**：生成大额资产地址时，强烈建议在**物理断网**环境下运行。
+- **权限管理**：脚本自动保障私钥文件权限，请勿手动将私钥暴露给他人。
+- **零联网**：核心生成逻辑 100% 运行于本地。
 
-## 🚀 环境要求
-- Bash (Linux / macOS / WSL)
-- [Solana CLI](https://docs.solana.com/cli/install-solana-cli-tools)
-
-## 🛠️ 安装与快速开始
-1) 赋予执行权限
+## ⚡️ 快速开始
+1) **赋予执行权限**
 ```bash
-chmod +x ./solana_vanity_gen.sh
+chmod +x ./svg.sh
 ```
-2) 交互模式运行
+2) **交互模式运行**
 ```bash
-./solana_vanity_gen.sh
+./svg.sh
 ```
 
-## 🤖 非交互命令行用法
-脚本支持以下常用参数；其它原生参数使用 `--` 分隔后透传至 `solana-keygen grind`。
+## 🛠️ 参数说明 (CLI 模式)
+除了以下参数外，可通过 `--` 后传递任何 `solana-keygen grind` 的原生参数。
 
-常用参数
-- --type prefix|suffix|both
-- --prefix STR
-- --suffix STR
-- --count N
-- --case sensitive|insensitive  (默认 insensitive)
-- --yes                         自动确认
-- --dry-run                     仅展示命令不执行
-- --out-dir PATH                将生成的 .json 归档到目录
-- -h, --help                    显示帮助
+| 参数 | 说明 |
+| :--- | :--- |
+| `--type` | `prefix` / `suffix` / `both` |
+| `--prefix` | 指定前缀 (Base58) |
+| `--suffix` | 指定后缀 (Base58) |
+| `--count` | 生成数量（默认 1） |
+| `--case` | `sensitive` / `insensitive` (默认) |
+| `--out-dir` | 指定归档输出文件夹 |
+| `--yes` | 自动确认长耗时提醒 |
+| `--dry-run` | 仅展示生成的原始命令 |
 
-示例
-- 不区分大小写的前缀:
+### 使用示例
 ```bash
-./solana_vanity_gen.sh --type prefix --prefix sol --count 1
-```
-- 区分大小写的后缀:
-```bash
-./solana_vanity_gen.sh --type suffix --suffix Node --case sensitive
-```
-- 前后缀同时匹配 + 输出目录:
-```bash
-./solana_vanity_gen.sh --type both --prefix A --suffix Z --count 2 --out-dir ./vanity-outputs
-```
-- 预演（不执行）:
-```bash
-./solana_vanity_gen.sh --type prefix --prefix gm --dry-run
-```
-- 透传原生参数（助记词示例）:
-```bash
-./solana_vanity_gen.sh --type prefix --prefix A --count 1 -- --use-mnemonic --word-count 24 --language japanese --no-bip39-passphrase
+# 生成 1 个以 gm 开头的地址
+./svg.sh --type prefix --prefix gm
+
+# 同时匹配前后缀，并存入指定文件夹
+./svg.sh --type both --prefix A --suffix Z --out-dir ./wallets
+
+# 使用 24 位助记词模式生成地址
+./svg.sh --type prefix --prefix Hi -- --use-mnemonic --word-count 24
 ```
 
-## 📈 耗时估算
-- 估算公式：期望尝试次数 ≈ 58^(前缀长度 + 后缀长度)。
-- 当自定义字符总数超过阈值（默认 5）时会提示确认，可用 `--yes` 跳过。
+## 🛠️ 环境配置
+- **操作系统**：macOS / Linux / WSL (Bash)
+- **核心组件**：[Solana CLI](https://solana.com/docs/intro/installation)
+  - 升级命令 (macOS): `agave-install update` 或 `brew upgrade solana`
 
-## 📂 输出与文件组织
-- 未指定 `--out-dir` 时，`solana-keygen` 默认在当前目录生成 .json。
-- 指定 `--out-dir` 时，脚本会在任务结束后将当前目录下生成的 .json 移动到该目录，并打印清单。
-- 也可透传原生 `--no-outfile` 或 `--outfile` 完全自行控制输出。
-
-## 💡 进阶
-- 查看帮助：
-```bash
-./solana_vanity_gen.sh --help
-```
-- 原生命令帮助：
-```bash
-solana-keygen grind --help
-```
-- 参考教程：QuickNode 指南（包含助记词、语言、词数等）
-
-## 🖼️ 使用方法演示截图
-![前缀5888](/images/前缀5888.avif)
-**上图为生成前缀 5888 地址的演示图**
-
-![后缀pump](/images/后缀pump.avif)
-**上图为生成后缀 pump 地址的演示图**
-
-## 🤝 贡献
-欢迎提交 Issues / PR 改进此脚本。
-
-## 📄 许可证
-本项目采用 MIT 许可证，详见 LICENSE。
-
-## 联系方式
+---
+**联系方式**
 - GitHub: [@gm365](https://github.com/gm365)
 - Twitter: [@gm365](https://x.com/gm365)
